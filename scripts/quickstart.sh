@@ -2,8 +2,8 @@
 # Run AgentGate locally without manually creating policy or random credentials.
 set -euo pipefail
 
-if ! command -v docker >/dev/null 2>&1 || ! docker compose version >/dev/null 2>&1; then
-  echo "Docker Desktop with Docker Compose is required."
+if ! command -v docker >/dev/null 2>&1 || ! docker compose version >/dev/null 2>&1 || ! docker info >/dev/null 2>&1; then
+  echo "A running Docker Desktop daemon with Docker Compose is required."
   exit 1
 fi
 

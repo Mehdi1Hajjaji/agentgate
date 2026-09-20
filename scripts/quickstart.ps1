@@ -5,6 +5,13 @@ if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
     throw 'Docker Desktop is required.'
 }
 docker compose version | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    throw 'Docker Compose is unavailable.'
+}
+docker info | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    throw 'Docker Desktop is installed but its daemon is not running.'
+}
 
 if (-not (Test-Path 'policy.yaml')) {
     Copy-Item 'policy.example.yaml' 'policy.yaml'
