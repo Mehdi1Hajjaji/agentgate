@@ -1,8 +1,8 @@
-# AgentGate threat model
+# ChangeWarden threat model
 
 ## Claim
 
-For GitHub actions routed through AgentGate, an Agent cannot cause a configured
+For GitHub actions routed through ChangeWarden, an Agent cannot cause a configured
 write unless the repository/action/payload satisfy policy, a distinct reviewer
 approves the request, and the Gate consumes one internal capability exactly
 once before calling GitHub.
@@ -20,10 +20,10 @@ once before calling GitHub.
 
 ## Non-claims
 
-- It does not protect a host whose operating system, AgentGate administrator
+- It does not protect a host whose operating system, ChangeWarden administrator
   token, or GitHub App private key has been compromised.
 - It does not prevent an Agent from using an unrelated GitHub credential or
-  network route outside AgentGate. Deploy agents without GitHub credentials and
+  network route outside ChangeWarden. Deploy agents without GitHub credentials and
   without direct GitHub tooling if this boundary is required.
 - A local hash chain is tamper-evident, not a globally immutable ledger.
 - It does not judge whether a human-approved code change is correct or safe.

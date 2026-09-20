@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Verify AgentGate's local append-only receipt chain."""
+"""Verify ChangeWarden's local append-only receipt chain."""
 from __future__ import annotations
 import hashlib, json, os, sqlite3, sys
 from pathlib import Path
 
-path=Path(os.environ.get("AGENTGATE_DATA_DIR","./data"))/"agentgate.sqlite"
-if not path.exists(): raise SystemExit("No AgentGate database found.")
+path=Path(os.environ.get("CHANGEWARDEN_DATA_DIR","./data"))/"changewarden.sqlite"
+if not path.exists(): raise SystemExit("No ChangeWarden database found.")
 conn=sqlite3.connect(path); conn.row_factory=sqlite3.Row
 previous=None; count=0
 for row in conn.execute("SELECT * FROM receipts ORDER BY accepted_at,rowid"):

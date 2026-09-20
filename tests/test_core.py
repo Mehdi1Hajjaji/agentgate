@@ -4,11 +4,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from agentgate.policy import Policy
-from agentgate.store import Store
+from changewarden.policy import Policy
+from changewarden.store import Store
 
 
-class AgentGateCoreTests(unittest.TestCase):
+class ChangeWardenCoreTests(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory(); self.store=Store(Path(self.temp.name)/"gate.sqlite")
 

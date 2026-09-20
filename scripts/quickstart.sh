@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run AgentGate locally without manually creating policy or random credentials.
+# Run ChangeWarden locally without manually creating policy or random credentials.
 set -euo pipefail
 
 if ! command -v docker >/dev/null 2>&1 || ! docker compose version >/dev/null 2>&1 || ! docker info >/dev/null 2>&1; then
@@ -10,6 +10,11 @@ fi
 if [ ! -f policy.yaml ]; then
   cp policy.example.yaml policy.yaml
   echo "Created policy.yaml from policy.example.yaml"
+fi
+
+if [ -f .env ] && grep -q '^AGENTGATE_' .env; then
+  mv .env .env.agentgate-legacy
+  echo "Preserved legacy AgentGate .env as .env.agentgate-legacy; generating ChangeWarden configuration."
 fi
 
 if [ ! -f .env ]; then
@@ -23,6 +28,6 @@ if [ ! -f .env ]; then
 fi
 
 mkdir -p secrets
-echo "Starting AgentGate at http://localhost:8080"
+echo "Starting ChangeWarden at http://localhost:8080"
 echo "GitHub App is optional for the local approval demo; external execution remains fail-closed until configured."
 docker compose up --build

@@ -5,15 +5,19 @@ repositories:
     actions:
       github.create_issue:
         approval: required
+        auto_execute_on_approval: true
         max_title_length: 160
         max_body_length: 10000
       github.create_pull_request:
         approval: required
+        auto_execute_on_approval: true
         allowed_base_branches: [main]
         max_title_length: 160
         max_body_length: 10000
       github.create_comment:
         approval: required
+        auto_execute_on_approval: true
         max_body_length: 10000
       github.request_review:
         approval: required
+        auto_execute_on_approval: true

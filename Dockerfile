@@ -6,4 +6,4 @@ COPY src ./src
 COPY policy.example.yaml ./policy.example.yaml
 ENV PYTHONPATH=/app/src
 EXPOSE 8080
-CMD ["python", "-m", "agentgate.app"]
+CMD ["python", "-m", "changewarden.app"]

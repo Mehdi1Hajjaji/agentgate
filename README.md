@@ -1,26 +1,30 @@
-# AgentGate
+# ChangeWarden
 
-**Governed GitHub actions for AI coding agents.**
+**Governed GitHub changes for AI coding agents.**
 
-AgentGate is a narrow execution boundary for coding agents such as Codex, Claude, Cursor, and custom automation. The Agent asks for a typed GitHub action; AgentGate evaluates a default-deny policy, requires an independent human decision, executes through a GitHub App whose credentials never enter the Agent, then stores a hash-linked receipt that includes the external result.
-
-It is deliberately not a generic proxy, a raw GitHub API relay, or a claim to solve AI alignment.
+ChangeWarden is a narrow execution boundary for Codex, Claude, Cursor, and custom coding agents. An Agent requests one typed GitHub change; ChangeWarden applies a default-deny policy, obtains an independent human decision when required, executes with a GitHub App credential that never enters the Agent, and records a receipt bound to GitHub's actual response.
 
 ```text
-Agent / MCP client -> AgentGate policy -> independent approval
-                                         -> one-time internal capability
-                                         -> GitHub App execution -> receipt
+Agent / MCP client -> policy -> independent approval -> one-time execution
+                                                        -> GitHub App -> receipt
 ```
 
-## What is governed
+It is not a generic GitHub proxy, a raw REST relay, or a solution to model alignment. Its claim is narrower: a configured GitHub change that crosses this Gate cannot execute without the policy and approval path recorded for it.
 
-`github.create_issue`, `github.create_pull_request`, `github.create_comment`, and `github.request_review` are the only accepted actions. Every repository and action must occur in `policy.yaml`; the default is deny.
+## Scope
 
-AgentGate v0.1 does **not** merge pull requests, modify repository contents, touch Actions secrets, modify settings, or manage collaborators.
+Only four typed actions exist:
+
+- `github.create_issue`
+- `github.create_pull_request` from an existing branch
+- `github.create_comment`
+- `github.request_review`
+
+Every repository and action must be explicitly listed in `policy.yaml`; the default is deny. ChangeWarden does not merge pull requests, write repository contents, alter secrets or settings, manage collaborators, or accept arbitrary GitHub URLs, methods, or headers.
 
 ## One-command local start
 
-With Docker Desktop running, use one command from the repository root:
+With Docker Desktop running, start from the repository root:
 
 ```bash
 bash scripts/quickstart.sh
@@ -32,38 +36,17 @@ On PowerShell:
 .\scripts\quickstart.ps1
 ```
 
-The script creates a local `policy.yaml`, secret `.env`, and `secrets/` folder
-only when they do not already exist, then starts AgentGate at
-`http://localhost:8080`. It never generates or stores a GitHub credential.
-You can use the approval flow locally; GitHub execution remains deliberately
-blocked until the App configuration described below exists.
+The script creates a local `policy.yaml`, private `.env`, and `secrets/` directory only if missing, then starts `http://localhost:8080`. It never creates or stores a GitHub credential. The review flow works locally; external GitHub execution fails closed until the GitHub App configuration exists.
 
-## Manual start
+## Governed flow
 
-```bash
-cp policy.example.yaml policy.yaml
-cp .env.example .env
-# Set two distinct long random values in .env:
-# AGENTGATE_AGENT_TOKEN and AGENTGATE_ADMIN_TOKEN
-python -m venv .venv
-. .venv/bin/activate
-pip install -r requirements.txt
-export PYTHONPATH=src
-python -m agentgate.app
-```
-
-The service runs at `http://127.0.0.1:8080`. It refuses to start without separate Agent and reviewer tokens. It can accept requests before GitHub App credentials are configured; execution then fails closed with `github_app_not_configured`.
-
-For Docker, copy `policy.example.yaml` to `policy.yaml`, create `.env`, place the GitHub App PEM in `secrets/github_app_private_key.pem`, then run `docker compose up --build`.
-
-## 30-second governed flow
-
-Ask for an Issue using the Agent token. The Agent gets no GitHub credential.
+An Agent submits a bounded action. It receives a review URL, not a GitHub token.
 
 ```bash
 curl -X POST http://127.0.0.1:8080/v1/actions \
-  -H "Authorization: Bearer $AGENTGATE_AGENT_TOKEN" \
-  -H "X-AgentGate-Actor: codex-demo" -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $CHANGEWARDEN_AGENT_TOKEN" \
+  -H "X-ChangeWarden-Actor: codex-demo" \
+  -H 'Content-Type: application/json' \
   -d '{
     "repository":"acme/example-repository",
     "action":"github.create_issue",
@@ -73,32 +56,55 @@ curl -X POST http://127.0.0.1:8080/v1/actions \
   }'
 ```
 
-Open the returned `review_url`, enter a reviewer identity different from `codex-demo`, provide the administrator token, and approve or deny. Approval does not execute. The requesting Agent then makes one fresh execution request:
+Open the returned `review_url`. A reviewer whose identity differs from the requester approves or denies with the separate reviewer token.
+
+`auto_execute_on_approval: true` is available per action in policy and is enabled in the example policy. With it, ChangeWarden rechecks the current policy and calls GitHub itself immediately after approval. The Agent never gets a second execution power and does not need polling to cause the change.
+
+Set `auto_execute_on_approval: false` when an operator wants an explicit, separate dispatch step. In both modes, the `approved -> executing` transition is atomic and cannot be used twice.
+
+Successful execution returns GitHub's external URL plus a hash-linked receipt. Verify local evidence with:
 
 ```bash
-curl -X POST http://127.0.0.1:8080/v1/requests/REQUEST_ID/execute \
-  -H "Authorization: Bearer $AGENTGATE_AGENT_TOKEN" \
-  -H "X-AgentGate-Actor: codex-demo"
+python scripts/verify_receipts.py
 ```
-
-The same request cannot execute twice. A successful response includes the external GitHub URL and receipt hash. Verify local evidence with `python scripts/verify_receipts.py`.
 
 ## MCP setup
 
-Run `mcp/server.py` as a stdio MCP server with `AGENTGATE_URL`, `AGENTGATE_AGENT_TOKEN`, and `AGENTGATE_ACTOR_ID`. It exposes exactly one tool: `governed_github_action`.
+The stdio MCP adapter exposes two narrow tools:
 
-Do not also expose a direct GitHub write tool or GitHub token to the same Agent; doing so creates a bypass outside AgentGate's security boundary.
+- `governed_github_change` requests a typed change.
+- `get_governed_change_status` reads its decision and receipt state.
 
-## Security boundary
+Example for Claude Desktop or another stdio-compatible MCP client:
 
-- GitHub uses an App installation token minted inside AgentGate, not a PAT.
-- A policy is reloaded and checked immediately before the GitHub call.
-- Common credential-shaped values are rejected before they can reach the review inbox or GitHub; this is a guardrail, not a substitute for DLP.
-- Approval has requester/reviewer separation.
-- `approved -> executing` is an atomic SQLite transition.
-- Receipts are linked by SHA-256 and bind the request, capability, external reference, timestamp, and preceding receipt.
+```json
+{
+  "mcpServers": {
+    "changewarden": {
+      "command": "python",
+      "args": ["/absolute/path/to/changewarden/mcp/server.py"],
+      "env": {
+        "CHANGEWARDEN_URL": "http://127.0.0.1:8080",
+        "CHANGEWARDEN_AGENT_TOKEN": "agent-token-only",
+        "CHANGEWARDEN_ACTOR_ID": "claude-coding-agent"
+      }
+    }
+  }
+}
+```
 
-Read [the threat model](docs/THREAT_MODEL.md) and [GitHub App setup](docs/GITHUB_APP_SETUP.md) before any deployment.
+Do not expose direct GitHub write tools or a GitHub token to the same Agent. Either creates a bypass outside ChangeWarden's security boundary.
+
+## Security properties
+
+- GitHub uses an App installation token minted inside ChangeWarden, never a personal access token held by the Agent.
+- Policy is reloaded and evaluated immediately before any external call.
+- Requester and reviewer must differ; self-approval is rejected.
+- Idempotency keys deduplicate an intent; an atomic state transition prevents a capability from executing twice.
+- Common credential-shaped input is rejected before it reaches the review inbox or GitHub. This is a guardrail, not general DLP.
+- Each accepted outcome appends a SHA-256 receipt binding request, capability, external reference, timestamp, and previous receipt hash.
+
+Read [the threat model](docs/THREAT_MODEL.md) and [GitHub App setup](docs/GITHUB_APP_SETUP.md) before deployment.
 
 ## Development checks
 

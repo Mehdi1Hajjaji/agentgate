@@ -1,19 +1,19 @@
 services:
-  agentgate:
+  changewarden:
     build: .
     ports:
       - "8080:8080"
     environment:
-      AGENTGATE_DATA_DIR: /var/lib/agentgate
-      AGENTGATE_POLICY_PATH: /app/policy.yaml
-      AGENTGATE_GITHUB_PRIVATE_KEY_PATH: /run/secrets/github_app_private_key.pem
+      CHANGEWARDEN_DATA_DIR: /var/lib/changewarden
+      CHANGEWARDEN_POLICY_PATH: /app/policy.yaml
+      CHANGEWARDEN_GITHUB_PRIVATE_KEY_PATH: /run/secrets/github_app_private_key.pem
     env_file:
       - .env
     volumes:
-      - agentgate-data:/var/lib/agentgate
+      - changewarden-data:/var/lib/changewarden
       - ./policy.yaml:/app/policy.yaml:ro
       # The directory always exists. The key itself is optional for a local
       # policy/approval demo; missing key means GitHub execution fails closed.
       - ./secrets:/run/secrets:ro
 volumes:
-  agentgate-data:
+  changewarden-data:
