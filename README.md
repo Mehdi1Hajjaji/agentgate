@@ -23,7 +23,7 @@ AgentGate v0.1 does **not** merge pull requests, modify repository contents, tou
 With Docker Desktop running, use one command from the repository root:
 
 ```bash
-./scripts/quickstart.sh
+bash scripts/quickstart.sh
 ```
 
 On PowerShell:
