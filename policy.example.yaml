@@ -1,0 +1,19 @@
+version: "1"
+default: deny
+repositories:
+  acme/example-repository:
+    actions:
+      github.create_issue:
+        approval: required
+        max_title_length: 160
+        max_body_length: 10000
+      github.create_pull_request:
+        approval: required
+        allowed_base_branches: [main]
+        max_title_length: 160
+        max_body_length: 10000
+      github.create_comment:
+        approval: required
+        max_body_length: 10000
+      github.request_review:
+        approval: required
